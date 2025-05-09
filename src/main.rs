@@ -20,10 +20,7 @@ fn main() -> std::process::ExitCode {
     let map = map_executables(paths).unwrap();
 
     if std::io::stdout().is_terminal() {
-        // Display a prompt for the user :)
-        print!("{:?}", current_dir());
-        stdout().flush().unwrap();
-
+        display_prompt();
         loop {
             let stdin = &io::stdin();
 
@@ -69,6 +66,12 @@ fn main() -> std::process::ExitCode {
         // No need to show prompt, not interactive.
         return ExitCode::SUCCESS;
     }
+}
+
+pub fn display_prompt() {
+    // Display a prompt for the user :)
+    print!("{:?}", current_dir());
+    stdout().flush().unwrap();
 }
 
 pub fn map_executables<I, P>(dirs: I) -> io::Result<HashMap<String, PathBuf>>
