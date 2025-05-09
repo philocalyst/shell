@@ -42,12 +42,9 @@ fn main() -> std::process::ExitCode {
 
             let delimeter = "&&";
             let mut tokens: Vec<String> = Vec::new();
-            while let Some(arg) = args.clone().into_iter().next() {
-                for piece in arg.split(delimeter) {
-                    tokens.push(piece.to_string());
-                }
+            for arg in args {
+                tokens.push(arg);
             }
-            println!("{:?}", args);
 
             if let Some(process) = map.get(&tokens[0]) {
                 let output = Command::new(process).output().unwrap();
