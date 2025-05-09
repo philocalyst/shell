@@ -69,6 +69,9 @@ fn main() -> std::process::ExitCode {
                     .stdout;
                 let output = String::from_utf8(output).expect("Command output wasn't valid UTF-8");
                 println!("{}", output); // Display output
+                let standard_output =
+                    String::from_utf8(output.stdout).expect("Command output wasn't valid UTF-8");
+                print!("{}", standard_output);
                 display_prompt(); // Then show prompt
             } else {
                 // If the process is not found..
