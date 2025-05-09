@@ -22,6 +22,7 @@ fn main() -> std::process::ExitCode {
     if std::io::stdout().is_terminal() {
         // Display a prompt for the user :)
         print!("{:?}", current_dir());
+        stdout().flush().unwrap();
 
         loop {
             let stdin = &io::stdin();
