@@ -37,6 +37,7 @@ fn main() -> std::process::ExitCode {
 
                 // Our continue conditions
                 if line.contains('[') {
+                    args.push(line);
                     continue;
                 }
 
