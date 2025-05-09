@@ -29,13 +29,21 @@ fn main() -> std::process::ExitCode {
 
             // Get command line arguments
             let mut args = Vec::new();
+            let mut continuing = false;
             for line in stdin.lock().lines() {
                 let line = line.unwrap();
-                if line.contains("END") {
-                    args.push(line);
+
+                // Our continue conditions
+                if line.contains('[') {
+                    continuing = true;
+                }
+
+                args.push(line);
+
+                // If end condition is met, break out of loop
+                if !continuing {
                     break;
                 }
-                args.push(line);
             }
 
             // Skip the program name
