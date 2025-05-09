@@ -10,6 +10,8 @@ use std::{
     process::{Command, ExitCode, ExitStatus},
 };
 
+use std::process::{Command, ExitCode, Stdio};
+
 use std::io;
 
 use is_terminal;
@@ -62,17 +64,9 @@ fn main() -> std::process::ExitCode {
 
             // Check if the command exists, if so, run it, but let the command handle the options.
             if let Some(process) = map.get(tokens.first().unwrap()) {
-                let output = Command::new(process).args(&tokens[1..]).output().unwrap();
+                let code = run_command(process.to_string_lossy().as_ref(), &tokens[1..]);
 
-                let standard_output =
-                    String::from_utf8(output.stdout).expect("Command output wasn't valid UTF-8");
-
-                let standard_error =
-                    String::from_utf8(output.stderr).expect("Command output wasn't valid UTF-8");
-
-                // Display output
-                print!("{}", standard_output);
-                print!("{}", standard_error);
+                // Display error
                 display_prompt(); // Then show prompt
             } else {
                 // If the process is not found..
@@ -84,6 +78,23 @@ fn main() -> std::process::ExitCode {
     } else {
         // No need to show prompt, not interactive.
         return ExitCode::SUCCESS;
+    }
+}
+
+fn run_command(cmd: &str, args: &[String]) -> ExitCode {
+    let status = Command::new(cmd)
+        .args(args)
+        // Effectively forking the process here, giving the child an inheritence of the terminals session.
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .expect("failed to spawn child");
+
+    // Mapping status code to Exit Code
+    match status.code() {
+        Some(code) => ExitCode::from(code as u8),
+        None => ExitCode::from(1),
     }
 }
 
