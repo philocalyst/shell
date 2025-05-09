@@ -1,13 +1,17 @@
 use std::{
+    env,
     env::{Args, args, current_dir},
-    fmt::Arguments,
+    error::Error,
+    fmt::{Arguments, Result},
     io::IsTerminal,
+    path::PathBuf,
+    process::{ExitCode, ExitStatus},
 };
 
 use std::io;
 
 use is_terminal;
-fn main() {
+fn main() -> std::process::ExitCode {
     if std::io::stdout().is_terminal() {
         // Display a prompt for the user.
         print!("{:?}", current_dir());
@@ -26,8 +30,18 @@ fn main() {
             }
         }
 
+        let path_var = env::var("PATH").unwrap();
+        let paths: Vec<PathBuf> = env::split_paths(&path_var).collect();
+        create_path_list(paths);
+
         print!("{:?}", tokens);
+        return ExitCode::SUCCESS;
     } else {
         // No need to show prompt, not interactive.
+        return ExitCode::SUCCESS;
     }
+}
+
+fn create_path_list(path_components: Vec<PathBuf>) {
+    println!("{:?}", path_components);
 }
