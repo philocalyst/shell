@@ -5,8 +5,9 @@ use std::{
     fmt::{Arguments, Result},
     fs,
     io::IsTerminal,
+    os::unix::process,
     path::{Path, PathBuf},
-    process::{self, ExitCode, ExitStatus},
+    process::{Command, ExitCode, ExitStatus},
 };
 
 use std::io;
@@ -34,7 +35,11 @@ fn main() -> std::process::ExitCode {
         let path_var = env::var("PATH").unwrap();
         let paths: Vec<PathBuf> = env::split_paths(&path_var).collect();
         let map = map_executables(paths).unwrap();
-        print!("{:?}", map);
+
+        if let Some(process) = map.get(&tokens[0]) {
+            let output = Command::new(process).output().unwrap();
+            println!("{:?}", output);
+        }
 
         return ExitCode::SUCCESS;
     } else {
