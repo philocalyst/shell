@@ -26,21 +26,22 @@ fn main() -> std::process::ExitCode {
 
             // Get command line arguments
             let mut args = Vec::new();
-            let mut continuing = false;
             for line in stdin.lock().lines() {
                 let line = line.unwrap();
+                // If user enters a blank line, display a new prompt and reset args.
+                if line.is_empty() {
+                    display_prompt();
+                    args.clear();
+                    continue;
+                }
 
                 // Our continue conditions
                 if line.contains('[') {
-                    continuing = true;
+                    continue;
                 }
 
                 args.push(line);
-
-                // If end condition is met, break out of loop
-                if !continuing {
-                    break;
-                }
+                break;
             }
 
             // Skip the program name
@@ -70,7 +71,7 @@ fn main() -> std::process::ExitCode {
 
 pub fn display_prompt() {
     // Display a prompt for the user :)
-    print!("{:?}", current_dir());
+    print!("{:?} ", current_dir());
     stdout().flush().unwrap();
 }
 
