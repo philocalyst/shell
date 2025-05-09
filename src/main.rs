@@ -53,8 +53,9 @@ fn main() -> std::process::ExitCode {
             }
 
             if let Some(process) = map.get(&tokens[0]) {
-                let output = Command::new(process).output().unwrap();
-                println!("{:?}", output);
+                let output = Command::new(process).output().unwrap().stdout;
+                let output = String::from_utf8(output).expect("Command output wasn't valid UTF-8");
+                println!("{}", output);
             } else {
                 // If the process is not found..
                 println!("rash: Unknown command: {}", tokens[0])
@@ -71,7 +72,7 @@ fn main() -> std::process::ExitCode {
 
 pub fn display_prompt() {
     // Display a prompt for the user :)
-    print!("{:?} ", current_dir());
+    print!("{:?} ", current_dir().unwrap());
     stdout().flush().unwrap();
 }
 
