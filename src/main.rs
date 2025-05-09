@@ -49,11 +49,18 @@ fn main() -> std::process::ExitCode {
             let delimeter = "&&";
             let mut tokens: Vec<String> = Vec::new();
             for arg in args {
-                tokens.push(arg);
+                for slice in arg.split(' ') {
+                    tokens.push(slice.to_string());
+                }
             }
 
-            if let Some(process) = map.get(&tokens[0]) {
-                let output = Command::new(process).output().unwrap().stdout;
+            // Check if the command exists, if so, run it, but let the command handle the options.
+            if let Some(process) = map.get(tokens.first().unwrap()) {
+                let output = Command::new(process)
+                    .args(&tokens[1..])
+                    .output()
+                    .unwrap()
+                    .stdout;
                 let output = String::from_utf8(output).expect("Command output wasn't valid UTF-8");
                 println!("{}", output);
             } else {
