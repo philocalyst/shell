@@ -5,7 +5,7 @@ use std::{
     fmt::{Arguments, Result},
     fs,
     io::IsTerminal,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{self, ExitCode, ExitStatus},
 };
 
@@ -33,9 +33,9 @@ fn main() -> std::process::ExitCode {
 
         let path_var = env::var("PATH").unwrap();
         let paths: Vec<PathBuf> = env::split_paths(&path_var).collect();
-        create_path_map(paths);
+        let map = map_executables(paths).unwrap();
+        print!("{:?}", map);
 
-        print!("{:?}", tokens);
         return ExitCode::SUCCESS;
     } else {
         // No need to show prompt, not interactive.
@@ -43,26 +43,32 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn create_path_map(path_components: Vec<PathBuf>) -> HashMap<String, PathBuf> {
-    // Map the name of an executable to its source path
-    let mut executable_map: HashMap<String, PathBuf> = HashMap::new();
+pub fn map_executables<I, P>(dirs: I) -> io::Result<HashMap<String, PathBuf>>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let mut map = HashMap::new();
 
-    for path in path_components {
-        if path.is_dir() {
-            let processes = fs::read_dir(path).unwrap();
-            processes.map(|entry| {
-                executable_map.insert(
-                    entry
-                        .unwrap()
-                        .path()
-                        .file_name()
-                        .unwrap()
-                        .to_string_lossy()
-                        .to_string(),
-                    entry.unwrap().path(),
-                )
-            });
+    for dir in dirs {
+        let dir = dir.as_ref();
+        if !dir.is_dir() {
+            continue;
+        }
+
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?; // Pass up any entry reading errors
+            let path = entry.path();
+            if !path.is_file() {
+                continue; // We're ignoring any subdirs or symlinks.
+            }
+            if let Some(name_os) = path.file_name() {
+                let name = name_os.to_string_lossy().into_owned();
+                // Don't insert if an entry is already present at key
+                map.entry(name).or_insert(path);
+            }
         }
     }
-    executable_map
+
+    Ok(map)
 }
