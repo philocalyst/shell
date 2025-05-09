@@ -62,16 +62,17 @@ fn main() -> std::process::ExitCode {
 
             // Check if the command exists, if so, run it, but let the command handle the options.
             if let Some(process) = map.get(tokens.first().unwrap()) {
-                let output = Command::new(process)
-                    .args(&tokens[1..])
-                    .output()
-                    .unwrap()
-                    .stdout;
-                let output = String::from_utf8(output).expect("Command output wasn't valid UTF-8");
-                println!("{}", output); // Display output
+                let output = Command::new(process).args(&tokens[1..]).output().unwrap();
+
                 let standard_output =
                     String::from_utf8(output.stdout).expect("Command output wasn't valid UTF-8");
+
+                let standard_error =
+                    String::from_utf8(output.stderr).expect("Command output wasn't valid UTF-8");
+
+                // Display output
                 print!("{}", standard_output);
+                print!("{}", standard_error);
                 display_prompt(); // Then show prompt
             } else {
                 // If the process is not found..
