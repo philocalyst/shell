@@ -68,12 +68,12 @@ fn main() -> std::process::ExitCode {
                     .unwrap()
                     .stdout;
                 let output = String::from_utf8(output).expect("Command output wasn't valid UTF-8");
-                println!("{}", output);
+                println!("{}", output); // Display output
+                display_prompt(); // Then show prompt
             } else {
                 // If the process is not found..
                 println!("rash: Unknown command: {}", tokens[0])
             }
-            break;
         }
 
         return ExitCode::SUCCESS;
@@ -85,7 +85,7 @@ fn main() -> std::process::ExitCode {
 
 pub fn display_prompt() {
     // Display a prompt for the user :)
-    print!("{:?} ", current_dir().unwrap());
+    print!("$ ");
     stdout().flush().unwrap();
 }
 
