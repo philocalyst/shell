@@ -4,7 +4,7 @@ use std::{
     error::Error,
     fmt::{Arguments, Result},
     fs,
-    io::{BufRead, IsTerminal},
+    io::{BufRead, IsTerminal, Write, stdout},
     os::unix::process,
     path::{Path, PathBuf},
     process::{Command, ExitCode, ExitStatus},
@@ -30,8 +30,12 @@ fn main() -> std::process::ExitCode {
             // Get command line arguments
             let mut args = Vec::new();
             for line in stdin.lock().lines() {
-                println!("{:?}", &line);
-                args.push(line.unwrap());
+                let line = line.unwrap();
+                if line.contains("END") {
+                    args.push(line);
+                    break;
+                }
+                args.push(line);
             }
 
             // Skip the program name
