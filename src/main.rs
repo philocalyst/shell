@@ -1,11 +1,12 @@
 use std::{
-    env,
-    env::{Args, args, current_dir},
+    collections::HashMap,
+    env::{self, Args, args, current_dir},
     error::Error,
     fmt::{Arguments, Result},
+    fs,
     io::IsTerminal,
     path::PathBuf,
-    process::{ExitCode, ExitStatus},
+    process::{self, ExitCode, ExitStatus},
 };
 
 use std::io;
@@ -32,7 +33,7 @@ fn main() -> std::process::ExitCode {
 
         let path_var = env::var("PATH").unwrap();
         let paths: Vec<PathBuf> = env::split_paths(&path_var).collect();
-        create_path_list(paths);
+        create_path_map(paths);
 
         print!("{:?}", tokens);
         return ExitCode::SUCCESS;
@@ -42,6 +43,26 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn create_path_list(path_components: Vec<PathBuf>) {
-    println!("{:?}", path_components);
+fn create_path_map(path_components: Vec<PathBuf>) -> HashMap<String, PathBuf> {
+    // Map the name of an executable to its source path
+    let mut executable_map: HashMap<String, PathBuf> = HashMap::new();
+
+    for path in path_components {
+        if path.is_dir() {
+            let processes = fs::read_dir(path).unwrap();
+            processes.map(|entry| {
+                executable_map.insert(
+                    entry
+                        .unwrap()
+                        .path()
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_string(),
+                    entry.unwrap().path(),
+                )
+            });
+        }
+    }
+    executable_map
 }
