@@ -5,9 +5,8 @@ use std::{
     fmt::{Arguments, Result},
     fs,
     io::{BufRead, IsTerminal, Write, stdout},
-    os::unix::process,
+    os::unix::process::{self, CommandExt},
     path::{Path, PathBuf},
-    process::{Command, ExitCode, ExitStatus},
 };
 
 use std::process::{Command, ExitCode, Stdio};
@@ -70,7 +69,8 @@ fn main() -> std::process::ExitCode {
                 display_prompt(); // Then show prompt
             } else {
                 // If the process is not found..
-                println!("rash: Unknown command: {}", tokens[0])
+                println!("rash: Unknown command: {}", tokens[0]);
+                display_prompt(); // Then show prompt
             }
         }
 
