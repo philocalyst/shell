@@ -21,7 +21,7 @@ fn main() -> std::process::ExitCode {
 
     if std::io::stdout().is_terminal() {
         display_prompt();
-        loop {
+        'main: loop {
             let stdin = &io::stdin();
 
             // Get command line arguments
@@ -39,6 +39,11 @@ fn main() -> std::process::ExitCode {
                 if line.contains('[') {
                     args.push(line);
                     continue;
+                }
+
+                // Exit is the leave keyword. Leave.
+                if line == "exit" {
+                    break 'main;
                 }
 
                 args.push(line);
