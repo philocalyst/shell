@@ -173,3 +173,69 @@ pub fn parse_to_command_store(input: &str) -> Vec<Vec<String>> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_parse_command_store_single_command() {
+        let input = "crackle";
+        let expected = vec![vec!["crackle".to_string()]];
+        assert_eq!(parse_to_command_store(input), expected);
+    }
+
+    #[test]
+    fn test_parse_command_store_with_args() {
+        let input = "echo why hello kitty cat!! hi hi!!";
+        let expected = vec![vec![
+            "echo".to_string(),
+            "why".to_string(),
+            "hello".to_string(),
+            "kitty".to_string(),
+            "cat!!".to_string(),
+            "hi".to_string(),
+            "hi!!".to_string(),
+        ]];
+        assert_eq!(parse_to_command_store(input), expected);
+    }
+
+    #[test]
+    fn test_parse_command_store_multiple_commands() {
+        let input = "ls -la;   pwd;echo bello recurse  ";
+        let expected = vec![
+            vec!["ls".to_string(), "-la".to_string()],
+            vec!["pwd".to_string()],
+            vec![
+                "echo".to_string(),
+                "bello".to_string(),
+                "recurse".to_string(),
+            ],
+        ];
+        assert_eq!(parse_to_command_store(input), expected);
+    }
+
+    #[test]
+    fn test_parse_command_store_ignores_empty() {
+        let input = ";  ;crackle  ; ; pop;";
+        let expected = vec![vec!["crackle".to_string()], vec!["pop".to_string()]];
+        assert_eq!(parse_to_command_store(input), expected);
+    }
+
+    #[test]
+    fn test_builtin_from_str_valid() {
+        assert_eq!(Builtin::from_str("cd").unwrap(), Builtin::CD);
+        assert_eq!(Builtin::from_str("exit").unwrap(), Builtin::Exit);
+    }
+
+    #[test]
+    fn test_builtin_from_str_invalid() {
+        match Builtin::from_str("purrpurr") {
+            Err(RashError::InvalidVariant { input }) => {
+                assert_eq!(input, "purrpurr".to_string());
+            }
+            other => panic!("expected InvalidVariant, got {:?}", other),
+        }
+    }
+}
