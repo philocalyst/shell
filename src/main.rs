@@ -15,29 +15,6 @@ use std::process::{Command, ExitCode, Stdio};
 
 use std::io;
 
-// Canoncial builtin
-trait Builtin {
-    fn builtin(&self, arg: &str, options: &[String]) -> ExitCode;
-}
-
-impl Builtin for fn() -> ExitCode {
-    fn builtin(&self, _arg: &str, _opts: &[String]) -> ExitCode {
-        (*self)()
-    }
-}
-
-impl Builtin for fn(&str) -> ExitCode {
-    fn builtin(&self, arg: &str, _opts: &[String]) -> ExitCode {
-        (*self)(arg)
-    }
-}
-
-impl Builtin for fn(&str, &[String]) -> ExitCode {
-    fn builtin(&self, arg: &str, opts: &[String]) -> ExitCode {
-        (*self)(arg, opts)
-    }
-}
-
 use is_terminal;
 fn main() -> std::process::ExitCode {
     // For now loading the PATH var once, before starting command capturing, because I need to think on what is an actual way to do this performantly. That is, the loading of new paths...
@@ -89,10 +66,7 @@ fn main() -> std::process::ExitCode {
                 // Exit is the leave keyword. Leave.
                 "exit" => break 'main,
                 "export" => export::export(&tokens),
-                "cd" => {
-                    change_directory::cd(&PathBuf::from(options[0].clone()));
-                    continue;
-                }
+                "cd" => change_directory::cd(&PathBuf::from(options[0].clone())),
                 _ => (), // Ignore
             }
 
