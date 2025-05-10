@@ -1,3 +1,5 @@
+mod builtins;
+use crate::builtins::{change_directory, export};
 use std::{
     collections::HashMap,
     env::{self, Args, args, current_dir},
@@ -12,6 +14,29 @@ use std::{
 use std::process::{Command, ExitCode, Stdio};
 
 use std::io;
+
+// Canoncial builtin
+trait Builtin {
+    fn builtin(&self, arg: &str, options: &[String]) -> ExitCode;
+}
+
+impl Builtin for fn() -> ExitCode {
+    fn builtin(&self, _arg: &str, _opts: &[String]) -> ExitCode {
+        (*self)()
+    }
+}
+
+impl Builtin for fn(&str) -> ExitCode {
+    fn builtin(&self, arg: &str, _opts: &[String]) -> ExitCode {
+        (*self)(arg)
+    }
+}
+
+impl Builtin for fn(&str, &[String]) -> ExitCode {
+    fn builtin(&self, arg: &str, opts: &[String]) -> ExitCode {
+        (*self)(arg, opts)
+    }
+}
 
 use is_terminal;
 fn main() -> std::process::ExitCode {
