@@ -99,24 +99,29 @@ fn main() -> std::process::ExitCode {
 
             let options = &tokens[1..];
 
-            match command.as_str().parse().unwrap() {
-                // Exit is the leave keyword. Leave.
-                Builtin::Exit => break 'main,
-                Builtin::Export => export::export(&tokens),
-                Builtin::CD => change_directory::cd(&PathBuf::from(options[0].clone())),
-                other => (), // Ignore
-            }
+            match command.as_str().parse::<Builtin>() {
+                Ok(command) => {
+                    match command {
+                        // Exit is the leave keyword. Leave.
+                        Builtin::Exit => break 'main,
+                        Builtin::Export => export::export(&tokens),
+                        Builtin::CD => change_directory::cd(&PathBuf::from(options[0].clone())),
+                    }
+                    display_prompt(); // Then show prompt
+                }
+                Err(_) => {
+                    // Command seems to be external, try and find it and execute it.
+                    if let Some(process) = map.get(command) {
+                        let code = run_command(&process, options);
 
-            // Command seems to be external, try and find it and execute it.
-            if let Some(process) = map.get(command) {
-                let code = run_command(&process, options);
-
-                // Display error
-                display_prompt(); // Then show prompt
-            } else {
-                // If the process is not found..
-                println!("rash: Unknown command: {}", tokens[0]);
-                display_prompt(); // Then show prompt
+                        // Display error
+                        display_prompt(); // Then show prompt
+                    } else {
+                        // If the process is not found..
+                        println!("rash: Unknown command: {}", tokens[0]);
+                        display_prompt(); // Then show prompt
+                    }
+                }
             }
         }
 
