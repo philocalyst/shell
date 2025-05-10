@@ -50,6 +50,8 @@ impl FromStr for Builtin {
     }
 }
 
+use std::process::{Command, ExitCode, Stdio};
+
 use is_terminal;
 fn main() -> std::process::ExitCode {
     // For now loading the PATH var once, before starting command capturing, because I need to think on what is an actual way to do this performantly. That is, the loading of new paths...
@@ -97,12 +99,12 @@ fn main() -> std::process::ExitCode {
 
             let options = &tokens[1..];
 
-            match command.as_str() {
+            match command.as_str().parse().unwrap() {
                 // Exit is the leave keyword. Leave.
-                "exit" => break 'main,
-                "export" => export::export(&tokens),
-                "cd" => change_directory::cd(&PathBuf::from(options[0].clone())),
-                _ => (), // Ignore
+                Builtin::Exit => break 'main,
+                Builtin::Export => export::export(&tokens),
+                Builtin::CD => change_directory::cd(&PathBuf::from(options[0].clone())),
+                other => (), // Ignore
             }
 
             // Command seems to be external, try and find it and execute it.
