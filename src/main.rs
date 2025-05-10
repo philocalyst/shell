@@ -71,18 +71,7 @@ fn main() -> std::process::ExitCode {
             break;
         }
 
-        let command_store: Vec<Vec<String>> = args
-            .join(" ") // Connect all of the vectors together
-            .split(';') // Then split if input is chained
-            .filter_map(|chunk| {
-                let chunk = chunk.trim(); // Get a clean chunk
-                if chunk.is_empty() {
-                    None
-                } else {
-                    Some(chunk.split_whitespace().map(String::from).collect()) // Then re-split and map into array
-                }
-            })
-            .collect();
+        let command_store: Vec<Vec<String>> = parse_to_command_store(&args.join(" "));
 
         for command in command_store {
             launch_command(&command, &map);
@@ -169,4 +158,18 @@ where
     }
 
     Ok(map)
+}
+
+pub fn parse_to_command_store(input: &str) -> Vec<Vec<String>> {
+    input
+        .split(';')
+        .filter_map(|chunk| {
+            let chunk = chunk.trim();
+            if chunk.is_empty() {
+                None
+            } else {
+                Some(chunk.split_whitespace().map(String::from).collect())
+            }
+        })
+        .collect()
 }
