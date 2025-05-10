@@ -42,11 +42,6 @@ fn main() -> std::process::ExitCode {
                     continue;
                 }
 
-                // Exit is the leave keyword. Leave.
-                if line == "exit" {
-                    break 'main;
-                }
-
                 args.push(line);
                 break;
             }
@@ -61,9 +56,20 @@ fn main() -> std::process::ExitCode {
                 }
             }
 
-            // Check if the command exists, if so, run it, but let the command handle the options.
-            if let Some(process) = map.get(tokens.first().unwrap()) {
-                let code = run_command(process.to_string_lossy().as_ref(), &tokens[1..]);
+            match command.as_str() {
+                // Exit is the leave keyword. Leave.
+                "exit" => break 'main,
+                "export" => export::export(&tokens),
+                "cd" => {
+                    change_directory::cd(&PathBuf::from(options[0].clone()));
+                    continue;
+                }
+                _ => (), // Ignore
+            }
+
+            // Command seems to be external, try and find it and execute it.
+            if let Some(process) = map.get(command) {
+                let code = run_command(&process, options);
 
                 // Display error
                 display_prompt(); // Then show prompt
