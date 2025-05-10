@@ -1,3 +1,4 @@
+use std::io::Read;
 mod builtins;
 use crate::builtins::{change_directory, export};
 use anyhow::Result;
@@ -7,7 +8,7 @@ use std::{
     error::Error,
     fmt::Arguments,
     fs,
-    io::{BufRead, IsTerminal, Read, Write, stdout},
+    io::{BufRead, IsTerminal, Write, stdout},
     os::unix::process::{self, CommandExt},
     path::{Path, PathBuf},
     str::FromStr,
@@ -132,7 +133,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn run_command(cmd: &PathBuf, args: &[String]) -> Result<(ExitCode, String)> {
+fn run_command_piped(cmd: &PathBuf, args: &[String]) -> Result<(ExitCode, String)> {
     // Create a child process with the command and args
     let mut baby = Command::new(cmd)
         .args(args)
@@ -147,7 +148,7 @@ fn run_command(cmd: &PathBuf, args: &[String]) -> Result<(ExitCode, String)> {
 
     // Read the output into a vector buffer of u8
     let mut output_buffer: Vec<u8> = Vec::new();
-    stdout_pipe.read_to_end(&mut output_buffer);
+    stdout_pipe.read_to_end(&mut output_buffer)?;
 
     // Get the result status to pass upwards
     let resulting_status = baby.wait()?;
@@ -159,13 +160,30 @@ fn run_command(cmd: &PathBuf, args: &[String]) -> Result<(ExitCode, String)> {
     Ok((ExitCode::from(exit_code), output_string))
 }
 
+fn run_command(cmd: &PathBuf, args: &[String]) -> ExitCode {
+    let status = Command::new(cmd)
+        .args(args)
+        // Effectively forking the process here, giving the child an inheritence of the terminals session.
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .expect("failed to spawn child");
+
+    // Mapping status code to Exit Code
+    match status.code() {
+        Some(code) => ExitCode::from(code as u8),
+        None => ExitCode::from(1),
+    }
+}
+
 pub fn display_prompt() {
     // Display a prompt for the user :)
     print!("$ ");
     stdout().flush().unwrap();
 }
 
-pub fn map_executables<I, P>(dirs: I) -> Result<HashMap<String, PathBuf>>
+pub fn map_executables<I, P>(dirs: I) -> io::Result<HashMap<String, PathBuf>>
 where
     I: IntoIterator<Item = P>,
     P: AsRef<Path>,
