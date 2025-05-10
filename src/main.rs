@@ -4,14 +4,20 @@ use std::{
     collections::HashMap,
     env::{self, Args, args, current_dir},
     error::Error,
-    fmt::{Arguments, Result},
+    fmt::Arguments,
     fs,
     io::{BufRead, IsTerminal, Write, stdout},
     os::unix::process::{self, CommandExt},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
-use std::process::{Command, ExitCode, Stdio};
+#[derive(Debug, PartialEq)]
+enum Builtin {
+    CD,
+    Exit,
+    Export,
+}
 
 use std::io;
 
