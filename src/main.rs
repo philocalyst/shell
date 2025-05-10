@@ -1,16 +1,12 @@
-use std::io::Read;
 mod builtins;
-use crate::builtins::{change_directory, export};
+use crate::builtins::change_directory;
 use anyhow::Result;
 use std::{
     collections::HashMap,
-    env::{self, Args, args, current_dir},
-    error::Error,
-    fmt::Arguments,
-    fs,
-    io::{BufRead, IsTerminal, Write, stdout},
-    os::unix::process::{self, CommandExt},
+    env, fs,
+    io::{BufRead, Write, stdout},
     path::{Path, PathBuf},
+    process::{Command, ExitCode, Stdio},
     str::FromStr,
 };
 
@@ -18,7 +14,6 @@ use std::{
 enum Builtin {
     CD,
     Exit,
-    Export,
 }
 
 use std::io;
@@ -44,7 +39,6 @@ impl FromStr for Builtin {
         match s {
             "cd" => Ok(Builtin::CD),
             "exit" => Ok(Builtin::Exit),
-            "export" => Ok(Builtin::Export),
             other => Err(RashError::InvalidVariant {
                 input: other.to_string(),
             }),
@@ -52,67 +46,48 @@ impl FromStr for Builtin {
     }
 }
 
-use std::process::{Command, ExitCode, Stdio};
-
-use is_terminal;
 fn main() -> std::process::ExitCode {
     // For now loading the PATH var once, before starting command capturing, because I need to think on what is an actual way to do this performantly. That is, the loading of new paths...
     let path_var = env::var("PATH").unwrap();
     let paths: Vec<PathBuf> = env::split_paths(&path_var).collect();
     let map = map_executables(paths).unwrap();
 
-    if std::io::stdout().is_terminal() {
-        display_prompt();
-        loop {
-            let stdin = &io::stdin();
+    display_prompt();
+    loop {
+        let stdin = &io::stdin();
 
-            // Get command line arguments
-            let mut args = Vec::new();
-            for line in stdin.lock().lines() {
-                let line = line.unwrap();
-                // If user enters a blank line, display a new prompt and reset args.
-                if line.is_empty() {
-                    display_prompt();
-                    args.clear();
-                    continue;
-                }
-
-                // Our continue conditions
-                if line.contains('[') {
-                    args.push(line);
-                    continue;
-                }
-
-                args.push(line);
-                break;
+        // Get command line arguments
+        let mut args = Vec::new();
+        for line in stdin.lock().lines() {
+            let line = line.unwrap();
+            // If user enters a blank line, display a new prompt and reset args.
+            if line.is_empty() {
+                display_prompt();
+                args.clear();
+                continue;
             }
 
-            let command_store: Vec<Vec<String>> = args
-                .join(" ") // Connect all of the vectors together
-                .split(';') // Then split if input is chained
-                .filter_map(|chunk| {
-                    let chunk = chunk.trim(); // Get a clean chunk
-                    if chunk.is_empty() {
-                        None
-                    } else {
-                        Some(chunk.split_whitespace().map(String::from).collect()) // Then re-split and map into array
-                    }
-                })
-                .collect();
-
-            for command in command_store {
-                launch_command(&command, &map);
-            }
-            display_prompt(); // Then show prompt
-
-            if 2 == 1 {
-                break;
-            }
+            args.push(line);
+            break;
         }
-        return ExitCode::SUCCESS;
-    } else {
-        // No need to show prompt, not interactive.
-        return ExitCode::SUCCESS;
+
+        let command_store: Vec<Vec<String>> = args
+            .join(" ") // Connect all of the vectors together
+            .split(';') // Then split if input is chained
+            .filter_map(|chunk| {
+                let chunk = chunk.trim(); // Get a clean chunk
+                if chunk.is_empty() {
+                    None
+                } else {
+                    Some(chunk.split_whitespace().map(String::from).collect()) // Then re-split and map into array
+                }
+            })
+            .collect();
+
+        for command in command_store {
+            launch_command(&command, &map);
+        }
+        display_prompt(); // Then show prompt
     }
 }
 
@@ -129,46 +104,18 @@ fn launch_command(
     match command.as_str().parse::<Builtin>() {
         Ok(command) => match command {
             Builtin::Exit => std::process::exit(0),
-            Builtin::Export => export::export(&argument_components),
             Builtin::CD => change_directory::cd(&PathBuf::from(options[0].clone())),
         },
         Err(_) => {
             // Command seems to be external, try and find and execute it.
             if let Some(command) = available_commands.get(command) {
-                let code = run_command(&command, options);
+                run_command(&command, options);
             } else {
                 // If the process is not found..
                 display_prompt(); // Then show prompt
             }
         }
     }
-}
-
-fn run_command_piped(cmd: &PathBuf, args: &[String]) -> Result<(ExitCode, String)> {
-    // Create a child process with the command and args
-    let mut baby = Command::new(cmd)
-        .args(args)
-        // Effectively forking the process here, giving the child an inheritence of the terminals session.
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()?;
-
-    // Take ownership of the output as a pipe
-    let mut stdout_pipe = baby.stdout.take().expect("Stdout was piped but was empty");
-
-    // Read the output into a vector buffer of u8
-    let mut output_buffer: Vec<u8> = Vec::new();
-    stdout_pipe.read_to_end(&mut output_buffer)?;
-
-    // Get the result status to pass upwards
-    let resulting_status = baby.wait()?;
-    let exit_code = resulting_status.code().unwrap_or(1) as u8;
-
-    // Read the vector buffer to an output string
-    let output_string = String::from_utf8(output_buffer)?;
-
-    Ok((ExitCode::from(exit_code), output_string))
 }
 
 fn run_command(cmd: &PathBuf, args: &[String]) -> ExitCode {
