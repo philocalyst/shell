@@ -87,23 +87,18 @@ fn main() -> std::process::ExitCode {
                 break;
             }
 
-            // Parse the input into an array of arguments (Currently a new argument is just determined by the presence of ';') and keep a vector of the components of each.
-            let mut command_store: Vec<Vec<String>> = Vec::new();
-            command_store.push(vec![]);
-
-            let mut current_command: usize = 0;
-            for arg in args {
-                for slice in arg.split(' ') {
-                    // If the slice ends with ;, then begin the parsing of the next command in the *chain*
-                    if slice.ends_with(';') {
-                        command_store[current_command].push(slice.to_string());
-                        command_store.push(vec![]);
-                        current_command += 1
+            let command_store: Vec<Vec<String>> = args
+                .join(" ") // Connect all of the vectors together
+                .split(';') // Then split if input is chained
+                .filter_map(|chunk| {
+                    let chunk = chunk.trim(); // Get a clean chunk
+                    if chunk.is_empty() {
+                        None
+                    } else {
+                        Some(chunk.split_whitespace().map(String::from).collect()) // Then re-split and map into array
                     }
-
-                    command_store[current_command].push(slice.to_string());
-                }
-            }
+                })
+                .collect();
 
             for command in command_store {
                 launch_command(&command, &map);
