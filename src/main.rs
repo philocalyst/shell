@@ -80,10 +80,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn launch_command(
-    argument_components: &Vec<String>,
-    available_commands: &HashMap<String, PathBuf>,
-) {
+fn launch_command(argument_components: &[String], available_commands: &HashMap<String, PathBuf>) {
     let command = argument_components.first().unwrap();
 
     // Anything after the program command is assumed to be options
@@ -98,7 +95,7 @@ fn launch_command(
         Err(_) => {
             // Command seems to be external, try and find and execute it.
             if let Some(command) = available_commands.get(command) {
-                run_command(&command, options);
+                run_command(command, options);
             } else {
                 // If the process is not found..
                 display_prompt(); // Then show prompt
