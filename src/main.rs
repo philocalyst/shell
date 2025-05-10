@@ -21,6 +21,35 @@ enum Builtin {
 
 use std::io;
 
+#[derive(Debug)]
+pub enum RashError {
+    /// Tried to parse an unknown variant
+    InvalidVariant { input: String },
+    /// Wrapper around any std::io::Error
+    Io(io::Error),
+}
+
+impl From<io::Error> for RashError {
+    fn from(err: io::Error) -> Self {
+        RashError::Io(err)
+    }
+}
+
+impl FromStr for Builtin {
+    type Err = RashError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "cd" => Ok(Builtin::CD),
+            "exit" => Ok(Builtin::Exit),
+            "export" => Ok(Builtin::Export),
+            other => Err(RashError::InvalidVariant {
+                input: other.to_string(),
+            }),
+        }
+    }
+}
+
 use is_terminal;
 fn main() -> std::process::ExitCode {
     // For now loading the PATH var once, before starting command capturing, because I need to think on what is an actual way to do this performantly. That is, the loading of new paths...
