@@ -56,6 +56,10 @@ fn main() -> std::process::ExitCode {
                 }
             }
 
+            let command = tokens.first().unwrap();
+
+            let options = &tokens[1..];
+
             match command.as_str() {
                 // Exit is the leave keyword. Leave.
                 "exit" => break 'main,
