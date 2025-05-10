@@ -1,12 +1,13 @@
 mod builtins;
 use crate::builtins::{change_directory, export};
+use anyhow::Result;
 use std::{
     collections::HashMap,
     env::{self, Args, args, current_dir},
     error::Error,
     fmt::Arguments,
     fs,
-    io::{BufRead, IsTerminal, Write, stdout},
+    io::{BufRead, IsTerminal, Read, Write, stdout},
     os::unix::process::{self, CommandExt},
     path::{Path, PathBuf},
     str::FromStr,
@@ -99,10 +100,10 @@ fn main() -> std::process::ExitCode {
 
             let options = &tokens[1..];
 
+            // Try to parse the argument into a builtin. If the operation fails, we can assume that it's not a supported builtin, and can be tested agaisnt the PATH.
             match command.as_str().parse::<Builtin>() {
                 Ok(command) => {
                     match command {
-                        // Exit is the leave keyword. Leave.
                         Builtin::Exit => break 'main,
                         Builtin::Export => export::export(&tokens),
                         Builtin::CD => change_directory::cd(&PathBuf::from(options[0].clone())),
@@ -113,7 +114,6 @@ fn main() -> std::process::ExitCode {
                     // Command seems to be external, try and find it and execute it.
                     if let Some(process) = map.get(command) {
                         let code = run_command(&process, options);
-
                         // Display error
                         display_prompt(); // Then show prompt
                     } else {
@@ -132,21 +132,31 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn run_command(cmd: &PathBuf, args: &[String]) -> ExitCode {
-    let status = Command::new(cmd)
+fn run_command(cmd: &PathBuf, args: &[String]) -> Result<(ExitCode, String)> {
+    // Create a child process with the command and args
+    let mut baby = Command::new(cmd)
         .args(args)
         // Effectively forking the process here, giving the child an inheritence of the terminals session.
         .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
+        .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
-        .status()
-        .expect("failed to spawn child");
+        .spawn()?;
 
-    // Mapping status code to Exit Code
-    match status.code() {
-        Some(code) => ExitCode::from(code as u8),
-        None => ExitCode::from(1),
-    }
+    // Take ownership of the output as a pipe
+    let mut stdout_pipe = baby.stdout.take().expect("Stdout was piped but was empty");
+
+    // Read the output into a vector buffer of u8
+    let mut output_buffer: Vec<u8> = Vec::new();
+    stdout_pipe.read_to_end(&mut output_buffer);
+
+    // Get the result status to pass upwards
+    let resulting_status = baby.wait()?;
+    let exit_code = resulting_status.code().unwrap_or(1) as u8;
+
+    // Read the vector buffer to an output string
+    let output_string = String::from_utf8(output_buffer)?;
+
+    Ok((ExitCode::from(exit_code), output_string))
 }
 
 pub fn display_prompt() {
@@ -155,7 +165,7 @@ pub fn display_prompt() {
     stdout().flush().unwrap();
 }
 
-pub fn map_executables<I, P>(dirs: I) -> io::Result<HashMap<String, PathBuf>>
+pub fn map_executables<I, P>(dirs: I) -> Result<HashMap<String, PathBuf>>
 where
     I: IntoIterator<Item = P>,
     P: AsRef<Path>,
