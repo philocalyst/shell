@@ -81,7 +81,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn run_command(cmd: &str, args: &[String]) -> ExitCode {
+fn run_command(cmd: &PathBuf, args: &[String]) -> ExitCode {
     let status = Command::new(cmd)
         .args(args)
         // Effectively forking the process here, giving the child an inheritence of the terminals session.
