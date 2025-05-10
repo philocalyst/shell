@@ -63,7 +63,7 @@ fn main() -> std::process::ExitCode {
 
     if std::io::stdout().is_terminal() {
         display_prompt();
-        'main: loop {
+        loop {
             let stdin = &io::stdin();
 
             // Get command line arguments
@@ -130,6 +130,40 @@ fn main() -> std::process::ExitCode {
     } else {
         // No need to show prompt, not interactive.
         return ExitCode::SUCCESS;
+    }
+}
+
+fn launch_command(
+    argument_components: &Vec<String>,
+    available_commands: &HashMap<String, PathBuf>,
+) {
+    let command = argument_components.first().unwrap();
+
+    // Anything after the program command is assumed to be options
+    let options = &argument_components[1..];
+
+    // Try to parse the argument into a builtin. If the operation fails, we can assume that it's not a supported builtin, and can be tested agaisnt the PATH.
+    match command.as_str().parse::<Builtin>() {
+        Ok(command) => {
+            match command {
+                Builtin::Exit => std::process::exit(0),
+                Builtin::Export => export::export(&argument_components),
+                Builtin::CD => change_directory::cd(&PathBuf::from(options[0].clone())),
+            }
+            display_prompt(); // Then show prompt
+        }
+        Err(_) => {
+            // Command seems to be external, try and find and execute it.
+            if let Some(command) = available_commands.get(command) {
+                let code = run_command(&command, options);
+                // Display error
+                display_prompt(); // Then show prompt
+            } else {
+                // If the process is not found..
+                println!("rash: Unknown command: {}", argument_components[0]);
+                display_prompt(); // Then show prompt
+            }
+        }
     }
 }
 
