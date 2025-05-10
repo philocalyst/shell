@@ -87,19 +87,27 @@ fn main() -> std::process::ExitCode {
                 break;
             }
 
-            // Skip the program name
+            // Parse the input into an array of arguments (Currently a new argument is just determined by the presence of ';') and keep a vector of the components of each.
+            let mut command_store: Vec<Vec<String>> = Vec::new();
+            command_store.push(vec![]);
 
-            let delimeter = "&&";
-            let mut tokens: Vec<String> = Vec::new();
+            let mut current_command: usize = 0;
             for arg in args {
                 for slice in arg.split(' ') {
-                    tokens.push(slice.to_string());
+                    // If the slice ends with ;, then begin the parsing of the next command in the *chain*
+                    if slice.ends_with(';') {
+                        command_store[current_command].push(slice.to_string());
+                        command_store.push(vec![]);
+                        current_command += 1
+                    }
+
+                    command_store[current_command].push(slice.to_string());
                 }
             }
 
-            let command = tokens.first().unwrap();
-
-            let options = &tokens[1..];
+            for command in command_store {
+                launch_command(&command, &map);
+            }
 
             // Try to parse the argument into a builtin. If the operation fails, we can assume that it's not a supported builtin, and can be tested agaisnt the PATH.
             match command.as_str().parse::<Builtin>() {
@@ -123,6 +131,8 @@ fn main() -> std::process::ExitCode {
                         display_prompt(); // Then show prompt
                     }
                 }
+            if 2 == 1 {
+                break;
             }
         }
 
